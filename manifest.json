@@ -5,6 +5,10 @@
 	"minAppVersion": "0.15.0",
 	"description": "Opens the left and/or right side panel by hovering over it.",
 	"author": "Bradley Wyatt",
-	"authorUrl": "https://raven.guhcat.com/",
+	"authorUrl": "https://github.com/bwya77",
+    "fundingUrl": {
+		"Buy Me a Coffee": "https://buymeacoffee.com/bwya77",
+		"GitHub Sponsor":  "https://github.com/sponsors/bwya77"
+  	},
 	"isDesktopOnly": true
 }
