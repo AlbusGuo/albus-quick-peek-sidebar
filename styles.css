@@ -1,10 +1,14 @@
 
-
 :root {
     --sidebar-expand-collapse-speed: 300ms;
     --sidebar-expand-delay: 200ms;
     --left-sidebar-max-width: 300px;
     --right-sidebar-max-width: 300px;
+}
+
+body {
+    --sidebar-width: var(--left-sidebar-max-width) !important;
+    --right-sidebar-width: var(--right-sidebar-max-width) !important;
 }
 
 .expand-sidebar-hover-disabled.is-disabled {
@@ -16,6 +20,14 @@
 .workspace-split.mod-horizontal.mod-right-split,
 .workspace-split.mod-horizontal.mod-sidedock {
     transition: all var(--sidebar-expand-collapse-speed) ease !important;
+    max-width: var(--left-sidebar-max-width) !important;
+    width: var(--left-sidebar-max-width);
+    transition: width var(--sidebar-expand-collapse-speed) ease, max-width var(--sidebar-expand-collapse-speed) ease !important;
+}
+
+.workspace-split.mod-horizontal.mod-right-split {
+    max-width: var(--right-sidebar-max-width) !important;
+    width: var(--right-sidebar-max-width);
 }
 
 /* Overlay mode styles */
@@ -35,30 +47,6 @@
     z-index: var(--layer-sidedock);
     box-shadow: rgba(0, 0, 0, 0.5) -10px 0px 18px -2px;
     transition: transform var(--sidebar-expand-collapse-speed) ease !important;
-}
-
-/* Size limits for sidebars */
-.workspace-split.mod-horizontal.mod-left-split {
-    max-width: var(--left-sidebar-max-width) !important;
-    transition: width var(--sidebar-expand-collapse-speed) ease, max-width var(--sidebar-expand-collapse-speed) ease !important;
-}
-
-.workspace-split.mod-horizontal.mod-right-split {
-    max-width: var(--right-sidebar-max-width) !important;
-    transition: width var(--sidebar-expand-collapse-speed) ease, max-width var(--sidebar-expand-collapse-speed) ease !important;
-}
-
-/* Also enforce Obsidian's built-in variables */
-body {
-    --sidebar-width: var(--left-sidebar-max-width) !important;
-    --right-sidebar-width: var(--right-sidebar-max-width) !important;
-}
-
-/* Animation speed for regular sidebars */
-.workspace-split.mod-horizontal.mod-left-split,
-.workspace-split.mod-horizontal.mod-right-split,
-.workspace-split.mod-horizontal.mod-sidedock {
-    transition: all var(--sidebar-expand-collapse-speed) ease !important;
 }
 
 /* Ensure sidebars appear properly on hover */
@@ -94,7 +82,6 @@ body {
 /* Apply a special class that can be used in JavaScript for menu detection */
 .open-sidebar-hover-plugin .hovered {
     /* This is the custom class that can be added via JS when a sidebar is being hovered */
-    /* The leftSplit.containerEl.addClass('hovered') approach in the bug report */
     pointer-events: auto;
     opacity: 1;
 }

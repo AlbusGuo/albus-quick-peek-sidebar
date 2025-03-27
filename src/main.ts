@@ -1,4 +1,16 @@
-import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { App, Plugin, PluginSettingTab, Setting, WorkspaceRibbon, WorkspaceSplit } from "obsidian";
+
+// Extended interfaces to access internal properties
+interface ExtendedWorkspaceSplit extends WorkspaceSplit {
+  containerEl: HTMLElement;
+  collapsed: boolean;
+  expand: () => void;
+  collapse: () => void;
+}
+
+interface ExtendedWorkspaceRibbon extends WorkspaceRibbon {
+  containerEl: HTMLElement;
+}
 
 interface OpenSidebarHoverSettings {
   leftSidebar: boolean;
@@ -34,9 +46,9 @@ export default class OpenSidebarHover extends Plugin {
   settings: OpenSidebarHoverSettings;
   isHoveringLeft = false;
   isHoveringRight = false;
-  leftSplit: any;
-  rightSplit: any;
-  leftRibbon: any;
+  leftSplit: ExtendedWorkspaceSplit;
+  rightSplit: ExtendedWorkspaceSplit;
+  leftRibbon: ExtendedWorkspaceRibbon;
   leftSplitMouseEnterHandler: () => void;
   rightSplitMouseEnterHandler: () => void;
   leftSplitMouseMoveHandler: () => void;
@@ -74,18 +86,15 @@ export default class OpenSidebarHover extends Plugin {
     // Add global CSS class to implement the suggested JS-CSS approach
     document.body.classList.add("open-sidebar-hover-plugin");
 
-    // Set CSS variables for animation speeds and max widths
-    this.applyCSSVariables();
+    // Update CSS variables based on settings
+    this.updateCSSVariables();
+    
     this.app.workspace.onLayoutReady(() => {
-      this.leftSplit = this.app.workspace.leftSplit;
-      this.rightSplit = this.app.workspace.rightSplit;
-
-      this.leftRibbon = this.app.workspace.leftRibbon;
+      // Cast to extended interfaces to access internal properties
+      this.leftSplit = this.app.workspace.leftSplit as unknown as ExtendedWorkspaceSplit;
+      this.rightSplit = this.app.workspace.rightSplit as unknown as ExtendedWorkspaceSplit;
+      this.leftRibbon = this.app.workspace.leftRibbon as unknown as ExtendedWorkspaceRibbon;
       
-      // Apply width settings immediately to the sidebars if they exist
-      this.applySidebarWidth(this.leftSplit, this.settings.leftSidebarMaxWidth);
-      this.applySidebarWidth(this.rightSplit, this.settings.rightSidebarMaxWidth);
-
       // add event listeners - IMPORTANT: REMOVE IN UNLOAD()
       document.addEventListener("mousemove", this.mouseMoveHandler);
       
@@ -109,10 +118,13 @@ export default class OpenSidebarHover extends Plugin {
       );
       
       // Enhanced implementation with hover class for left split
-      (this.leftRibbon as any).containerEl.addEventListener(
-        "mouseenter",
-        this.leftRibbonMouseEnterHandler
-      );
+      if (this.leftRibbon && this.leftRibbon.containerEl) {
+        this.leftRibbon.containerEl.addEventListener(
+          "mouseenter",
+          this.leftRibbonMouseEnterHandler
+        );
+      }
+      
       this.leftSplitMouseMoveHandler = () => this.leftSplit.containerEl.addClass('hovered');
       this.leftSplit.containerEl.addEventListener(
         "mousemove", 
@@ -152,37 +164,40 @@ export default class OpenSidebarHover extends Plugin {
     document.removeEventListener("click", this.documentClickHandler);
     
     // Clean up right split event listeners
-    this.rightSplit.containerEl.removeEventListener(
-      "mouseleave",
-      this.rightSplitMouseLeaveHandler
-    );
-    this.rightSplit.containerEl.removeEventListener(
-      "mouseenter",
-      this.rightSplitMouseEnterHandler
-    );
-    
-    // Also remove the new mousemove listener for hover class
     if (this.rightSplit && this.rightSplit.containerEl) {
+      this.rightSplit.containerEl.removeEventListener(
+        "mouseleave",
+        this.rightSplitMouseLeaveHandler
+      );
+      this.rightSplit.containerEl.removeEventListener(
+        "mouseenter",
+        this.rightSplitMouseEnterHandler
+      );
+      
+      // Also remove the mousemove listener for hover class
       const oldMousemove = () => this.rightSplit.containerEl.addClass('hovered');
       this.rightSplit.containerEl.removeEventListener("mousemove", oldMousemove);
     }
     
     // Clean up left split event listeners
-    (this.leftRibbon as any).containerEl.removeEventListener(
-      "mouseenter",
-      this.leftRibbonMouseEnterHandler
-    );
-    this.leftSplit.containerEl.removeEventListener(
-      "mouseleave",
-      this.leftSplitMouseLeaveHandler
-    );
-    this.leftSplit.containerEl.removeEventListener(
-      "mouseenter",
-      this.leftSplitMouseEnterHandler
-    );
+    if (this.leftRibbon && this.leftRibbon.containerEl) {
+      this.leftRibbon.containerEl.removeEventListener(
+        "mouseenter",
+        this.leftRibbonMouseEnterHandler
+      );
+    }
     
-    // Also remove the new mousemove listener for hover class
     if (this.leftSplit && this.leftSplit.containerEl) {
+      this.leftSplit.containerEl.removeEventListener(
+        "mouseleave",
+        this.leftSplitMouseLeaveHandler
+      );
+      this.leftSplit.containerEl.removeEventListener(
+        "mouseenter",
+        this.leftSplitMouseEnterHandler
+      );
+      
+      // Also remove the mousemove listener for hover class
       const oldMousemove = () => this.leftSplit.containerEl.addClass('hovered');
       this.leftSplit.containerEl.removeEventListener("mousemove", oldMousemove);
     }
@@ -196,42 +211,35 @@ export default class OpenSidebarHover extends Plugin {
     await this.saveData(this.settings);
   }
 
-  // Helper method to apply CSS variables
-  applyCSSVariables() {
-    document.documentElement.style.setProperty('--sidebar-expand-collapse-speed', `${this.settings.expandCollapseSpeed}ms`);
-    document.documentElement.style.setProperty('--sidebar-expand-delay', `${this.settings.sidebarExpandDelay}ms`);
-    document.documentElement.style.setProperty('--left-sidebar-max-width', `${this.settings.leftSidebarMaxWidth}px`);
-    document.documentElement.style.setProperty('--right-sidebar-max-width', `${this.settings.rightSidebarMaxWidth}px`);
+  // Helper method to update CSS variables
+  updateCSSVariables() {
+    // Create a style element to hold custom CSS variables
+    const styleEl = document.createElement('style');
+    styleEl.id = 'obsidian-quick-peek-sidebar-variables';
     
-    // Try to also use Obsidian's CSS variables if they exist
-    document.body.style.setProperty('--sidebar-width', `${this.settings.leftSidebarMaxWidth}px`);
-    document.body.style.setProperty('--right-sidebar-width', `${this.settings.rightSidebarMaxWidth}px`);
-  }
-  
-  // Try to apply sidebar width using various methods
-  applySidebarWidth(split: any, width: number) {
-    if (!split || !split.containerEl) return;
-    
-    // Set transition first to ensure smooth animation
-    const transitionValue = `width var(--sidebar-expand-collapse-speed) ease, max-width var(--sidebar-expand-collapse-speed) ease`;
-    split.containerEl.style.transition = transitionValue;
-    
-    // Direct style manipulation
-    split.containerEl.style.width = `${width}px`;
-    split.containerEl.style.maxWidth = `${width}px`;
-    
-    // Try various Obsidian internal methods
-    const methodsToTry = ['resize', 'setWidth', 'setSize', 'onResize'];
-    for (const method of methodsToTry) {
-      if (typeof split[method] === 'function') {
-        try {
-        split[method](width);
-        break; // Stop if we found a working method
-        } catch (e) {
-          // Method failed, try the next one
-        }
-      }
+    // Remove any existing style element with this ID
+    const existingStyle = document.getElementById(styleEl.id);
+    if (existingStyle) {
+      existingStyle.remove();
     }
+    
+    // Add the CSS variables to the style element
+    styleEl.textContent = `
+      :root {
+        --sidebar-expand-collapse-speed: ${this.settings.expandCollapseSpeed}ms;
+        --sidebar-expand-delay: ${this.settings.sidebarExpandDelay}ms;
+        --left-sidebar-max-width: ${this.settings.leftSidebarMaxWidth}px;
+        --right-sidebar-max-width: ${this.settings.rightSidebarMaxWidth}px;
+      }
+      
+      body {
+        --sidebar-width: ${this.settings.leftSidebarMaxWidth}px !important;
+        --right-sidebar-width: ${this.settings.rightSidebarMaxWidth}px !important;
+      }
+    `;
+    
+    // Add the style element to the document head
+    document.head.appendChild(styleEl);
   }
 
   // -- Non-Obsidian API --------------------------
@@ -242,40 +250,34 @@ export default class OpenSidebarHover extends Plugin {
     // Start animation by expanding
     this.rightSplit.expand();
     this.isHoveringRight = true;
-    
-    // Wait a short time to ensure the expansion animation starts
-    setTimeout(() => {
-      // Then apply the width with our helper method
-      this.applySidebarWidth(this.rightSplit, this.settings.rightSidebarMaxWidth);
-    }, 50); // Small delay to let expansion animation start
   }
+  
   expandLeft() {
     // Start animation by expanding
     this.leftSplit.expand();
     this.isHoveringLeft = true;
-    
-    // Wait a short time to ensure the expansion animation starts
-    setTimeout(() => {
-      // Then apply the width with our helper method
-      this.applySidebarWidth(this.leftSplit, this.settings.leftSidebarMaxWidth);
-    }, 50); // Small delay to let expansion animation start
   }
+  
   expandBoth() {
     this.expandRight();
     this.expandLeft();
   }
+  
   collapseRight() {
     this.rightSplit.collapse();
     this.isHoveringRight = false;
   }
+  
   collapseLeft() {
     this.leftSplit.collapse();
     this.isHoveringLeft = false;
   }
+  
   collapseBoth() {
     this.collapseRight();
     this.collapseLeft();
   }
+  
   // Event handlers
   mouseMoveHandler = (event: MouseEvent) => {
     const mouseX = event.clientX;
@@ -338,7 +340,10 @@ export default class OpenSidebarHover extends Plugin {
   rightSplitMouseLeaveHandler = (event: MouseEvent) => {
     // Don't process if we're leaving to the tab header container or a menu
     const target = event.relatedTarget as HTMLElement;
-    if (target && (target.closest('.workspace-tab-header-container-inner') || target?.hasClass('menu') || target?.classList?.contains('menu') || target?.closest('.menu'))) {
+    if (target && (target.closest('.workspace-tab-header-container-inner') || 
+                  (target.hasClass && target.hasClass('menu')) || 
+                  target?.classList?.contains('menu') || 
+                  target?.closest('.menu'))) {
       return;
     }
     
@@ -362,7 +367,10 @@ export default class OpenSidebarHover extends Plugin {
   leftSplitMouseLeaveHandler = (event: MouseEvent) => {
     // Don't process if we're leaving to the tab header container or a menu
     const target = event.relatedTarget as HTMLElement;
-    if (target && (target.closest('.workspace-tab-header-container-inner') || target?.hasClass('menu') || target?.classList?.contains('menu') || target?.closest('.menu'))) {
+    if (target && (target.closest('.workspace-tab-header-container-inner') || 
+                  (target.hasClass && target.hasClass('menu')) || 
+                  target?.classList?.contains('menu') || 
+                  target?.closest('.menu'))) {
       return;
     }
 
@@ -561,7 +569,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
               this.plugin.settings.sidebarExpandDelay = v;
             }
             // Apply the CSS variables immediately
-            this.plugin.applyCSSVariables();
+            this.plugin.updateCSSVariables();
             await this.plugin.saveSettings();
           });
       });
@@ -583,7 +591,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
               this.plugin.settings.expandCollapseSpeed = v;
             }
             // Apply the CSS variables immediately
-            this.plugin.applyCSSVariables();
+            this.plugin.updateCSSVariables();
             await this.plugin.saveSettings();
           });
       });
@@ -608,13 +616,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
               this.plugin.settings.leftSidebarMaxWidth = v;
             }
             // Apply the CSS variables immediately
-            this.plugin.applyCSSVariables();
-            
-            // If sidebar is expanded, update it immediately
-            if (this.plugin.leftSplit && !this.plugin.leftSplit.collapsed) {
-              this.plugin.applySidebarWidth(this.plugin.leftSplit, this.plugin.settings.leftSidebarMaxWidth);
-            }
-            
+            this.plugin.updateCSSVariables();            
             await this.plugin.saveSettings();
           });
       });
@@ -636,13 +638,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
               this.plugin.settings.rightSidebarMaxWidth = v;
             }
             // Apply the CSS variables immediately
-            this.plugin.applyCSSVariables();
-            
-            // If sidebar is expanded, update it immediately
-            if (this.plugin.rightSplit && !this.plugin.rightSplit.collapsed) {
-              this.plugin.applySidebarWidth(this.plugin.rightSplit, this.plugin.settings.rightSidebarMaxWidth);
-            }
-            
+            this.plugin.updateCSSVariables();
             await this.plugin.saveSettings();
           });
       });
