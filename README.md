@@ -1,4 +1,4 @@
-# Obsidian Quick Peek Sidebar
+# Quick Peek Sidebar
 
 Automatically expand and collapse the left/right or both sidebars when hovering over the edge of the window.
 

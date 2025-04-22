@@ -423,7 +423,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
 
     // BASIC SETTINGS (no heading)
     new Setting(containerEl)
-      .setName("Left Sidebar Hover")
+      .setName("Left sidebar hover")
       .setDesc(
         "Enables the expansion and collapsing of the left sidebar on hover."
       )
@@ -435,7 +435,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Right Sidebar Hover")
+      .setName("Right sidebar hover")
       .setDesc(
         "Enables the expansion and collapsing of the right sidebar on hover. Only collapses the right panel unless you have a right ribbon."
       )
@@ -449,7 +449,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Sync Left and Right")
+      .setName("Sync left and right")
       .setDesc(
         "If enabled, hovering over the right sidebar will also expand the left sidebar at the same time, and vice versa. (Left and Right sidebar must both be enabled above)"
       )
@@ -463,7 +463,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Overlay Mode")
+      .setName("Overlay mode")
       .setDesc(
         "When enabled, sidebars will slide over the main content without affecting the layout. When disabled, sidebars will expand by pushing content."
       )
@@ -488,7 +488,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
     new Setting(containerEl).setName("Behavior").setHeading();
 
     new Setting(containerEl)
-      .setName("Left Sidebar Pixel Trigger")
+      .setName("Left sidebar pixel trigger")
       .setDesc(
         "Specify the number of pixels from the left edge of the editor that will trigger the left sidebar to open on hover (must be greater than 0)"
       )
@@ -509,7 +509,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Right Sidebar Pixel Trigger")
+      .setName("Right sidebar pixel trigger")
       .setDesc(
         "Specify the number of pixels from the right edge of the editor that will trigger the right sidebar to open on hover (must be greater than 0)"
       )
@@ -533,7 +533,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
     new Setting(containerEl).setName("Timing").setHeading();
 
     new Setting(containerEl)
-      .setName("Sidebar Collapse Delay")
+      .setName("Sidebar collapse delay")
       .setDesc(
         "The delay in milliseconds before the sidebar collapses after the mouse has left. Enter '0' to disable delay."
       )
@@ -553,7 +553,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Sidebar Expand Delay")
+      .setName("Sidebar expand delay")
       .setDesc(
         "The delay in milliseconds before the sidebar expands after hovering. Default is 200ms."
       )
@@ -575,7 +575,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
       });
       
     new Setting(containerEl)
-      .setName("Expand/Collapse Animation Speed")
+      .setName("Expand/collapse animation speed")
       .setDesc(
         "The speed of the sidebar expand/collapse animation in milliseconds."
       )
@@ -600,7 +600,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
     new Setting(containerEl).setName("Appearance").setHeading();
 
     new Setting(containerEl)
-      .setName("Left Sidebar Maximum Width")
+      .setName("Left sidebar maximum width")
       .setDesc(
         "Specify the maximum width in pixels for the left sidebar when expanded"
       )
@@ -622,7 +622,7 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("Right Sidebar Maximum Width")
+      .setName("Right sidebar maximum width")
       .setDesc(
         "Specify the maximum width in pixels for the right sidebar when expanded"
       )
