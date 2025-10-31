@@ -13,6 +13,7 @@ interface ExtendedWorkspaceRibbon extends WorkspaceRibbon {
 }
 
 interface OpenSidebarHoverSettings {
+  enabled: boolean;
   leftSidebar: boolean;
   rightSidebar: boolean;
   syncLeftRight: boolean;
@@ -28,6 +29,7 @@ interface OpenSidebarHoverSettings {
 }
 
 const DEFAULT_SETTINGS: OpenSidebarHoverSettings = {
+  enabled: true,
   leftSidebar: true,
   rightSidebar: true,
   syncLeftRight: false,
@@ -56,6 +58,9 @@ export default class OpenSidebarHover extends Plugin {
   
   // Event handler for document clicks
   documentClickHandler = (e: MouseEvent) => {
+    // Don't process if plugin is disabled
+    if (!this.settings.enabled) return;
+    
     const target = e.target as HTMLElement;
     
     // Make sure leftSplit and rightSplit are initialized
@@ -78,6 +83,79 @@ export default class OpenSidebarHover extends Plugin {
   async onload() {
     await this.loadSettings();
 
+    // Add command to toggle plugin functionality
+    this.addCommand({
+      id: 'toggle-plugin',
+      name: 'Toggle sidebar hover functionality',
+      callback: () => {
+        this.togglePlugin();
+      }
+    });
+
+    // Apply overlay mode class only if both plugin is enabled and overlay mode is enabled
+    if (this.settings.enabled && this.settings.overlayMode) {
+      document.body.classList.add("sidebar-overlay-mode");
+    }
+    
+    // Add global CSS class only if plugin is enabled
+    if (this.settings.enabled) {
+      document.body.classList.add("open-sidebar-hover-plugin");
+    }
+
+    // Update CSS variables based on settings only if plugin is enabled
+    if (this.settings.enabled) {
+      this.updateCSSVariables();
+    }
+    
+    this.app.workspace.onLayoutReady(() => {
+      // Cast to extended interfaces to access internal properties
+      this.leftSplit = this.app.workspace.leftSplit as unknown as ExtendedWorkspaceSplit;
+      this.rightSplit = this.app.workspace.rightSplit as unknown as ExtendedWorkspaceSplit;
+      this.leftRibbon = this.app.workspace.leftRibbon as unknown as ExtendedWorkspaceRibbon;
+      
+      // Only add event listeners if plugin is enabled
+      if (this.settings.enabled) {
+        this.addEventListeners();
+      }
+    });
+
+    this.addSettingTab(new SidebarHoverSettingsTab(this.app, this));
+  }
+
+  onunload() {
+    this.saveSettings();
+
+    // Remove all plugin-related classes and event listeners
+    this.disablePluginFeatures();
+
+    // Remove all event listeners using the centralized method
+    this.removeEventListeners();
+  }
+
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings() {
+    await this.saveData(this.settings);
+  }
+
+  // Toggle plugin functionality
+  async togglePlugin() {
+    this.settings.enabled = !this.settings.enabled;
+    await this.saveSettings();
+    
+    if (this.settings.enabled) {
+      this.enablePluginFeatures();
+      this.addEventListeners();
+    } else {
+      this.disablePluginFeatures();
+      this.removeEventListeners();
+    }
+  }
+
+  // Enable all plugin features
+  enablePluginFeatures() {
     // Apply overlay mode class if enabled in settings
     if (this.settings.overlayMode) {
       document.body.classList.add("sidebar-overlay-mode");
@@ -88,77 +166,81 @@ export default class OpenSidebarHover extends Plugin {
 
     // Update CSS variables based on settings
     this.updateCSSVariables();
-    
-    this.app.workspace.onLayoutReady(() => {
-      // Cast to extended interfaces to access internal properties
-      this.leftSplit = this.app.workspace.leftSplit as unknown as ExtendedWorkspaceSplit;
-      this.rightSplit = this.app.workspace.rightSplit as unknown as ExtendedWorkspaceSplit;
-      this.leftRibbon = this.app.workspace.leftRibbon as unknown as ExtendedWorkspaceRibbon;
-      
-      // add event listeners - IMPORTANT: REMOVE IN UNLOAD()
-      document.addEventListener("mousemove", this.mouseMoveHandler);
-      
-      // Enhanced implementation with hover class for right split
-      this.rightSplitMouseMoveHandler = () => this.rightSplit.containerEl.addClass('hovered');
-      this.rightSplit.containerEl.addEventListener(
-        "mousemove", 
-        this.rightSplitMouseMoveHandler
-      );
-      this.rightSplit.containerEl.addEventListener(
-        "mouseleave",
-        this.rightSplitMouseLeaveHandler
-      );
-      this.rightSplitMouseEnterHandler = () => { 
-        this.isHoveringRight = true; 
-        this.rightSplit.containerEl.addClass('hovered');
-      };
-      this.rightSplit.containerEl.addEventListener(
-        "mouseenter",
-        this.rightSplitMouseEnterHandler
-      );
-      
-      // Enhanced implementation with hover class for left split
-      if (this.leftRibbon && this.leftRibbon.containerEl) {
-        this.leftRibbon.containerEl.addEventListener(
-          "mouseenter",
-          this.leftRibbonMouseEnterHandler
-        );
-      }
-      
-      this.leftSplitMouseMoveHandler = () => this.leftSplit.containerEl.addClass('hovered');
-      this.leftSplit.containerEl.addEventListener(
-        "mousemove", 
-        this.leftSplitMouseMoveHandler
-      );
-      this.leftSplit.containerEl.addEventListener(
-        "mouseleave",
-        this.leftSplitMouseLeaveHandler
-      );
-      this.leftSplitMouseEnterHandler = () => { 
-        this.isHoveringLeft = true; 
-        this.leftSplit.containerEl.addClass('hovered');
-      };
-      this.leftSplit.containerEl.addEventListener(
-        "mouseenter",
-        this.leftSplitMouseEnterHandler
-      );
-      
-      // Add a document-wide click handler to help with collapse issues
-      document.addEventListener("click", this.documentClickHandler);
-    });
-
-    this.addSettingTab(new SidebarHoverSettingsTab(this.app, this));
   }
 
-  onunload() {
-    this.saveSettings();
-
+  // Disable all plugin features
+  disablePluginFeatures() {
     // Remove overlay mode class if it was added
     document.body.classList.remove("sidebar-overlay-mode");
     
     // Remove the global CSS class
     document.body.classList.remove("open-sidebar-hover-plugin");
 
+    // Remove CSS variables style element
+    const styleEl = document.getElementById('obsidian-quick-peek-sidebar-variables');
+    if (styleEl) {
+      styleEl.remove();
+    }
+  }
+
+  // Add event listeners
+  addEventListeners() {
+    if (!this.leftSplit || !this.rightSplit) return;
+    
+    // add event listeners - IMPORTANT: REMOVE IN UNLOAD()
+    document.addEventListener("mousemove", this.mouseMoveHandler);
+    
+    // Enhanced implementation with hover class for right split
+    this.rightSplitMouseMoveHandler = () => this.rightSplit.containerEl.addClass('hovered');
+    this.rightSplit.containerEl.addEventListener(
+      "mousemove", 
+      this.rightSplitMouseMoveHandler
+    );
+    this.rightSplit.containerEl.addEventListener(
+      "mouseleave",
+      this.rightSplitMouseLeaveHandler
+    );
+    this.rightSplitMouseEnterHandler = () => { 
+      this.isHoveringRight = true; 
+      this.rightSplit.containerEl.addClass('hovered');
+    };
+    this.rightSplit.containerEl.addEventListener(
+      "mouseenter",
+      this.rightSplitMouseEnterHandler
+    );
+    
+    // Enhanced implementation with hover class for left split
+    if (this.leftRibbon && this.leftRibbon.containerEl) {
+      this.leftRibbon.containerEl.addEventListener(
+        "mouseenter",
+        this.leftRibbonMouseEnterHandler
+      );
+    }
+    
+    this.leftSplitMouseMoveHandler = () => this.leftSplit.containerEl.addClass('hovered');
+    this.leftSplit.containerEl.addEventListener(
+      "mousemove", 
+      this.leftSplitMouseMoveHandler
+    );
+    this.leftSplit.containerEl.addEventListener(
+      "mouseleave",
+      this.leftSplitMouseLeaveHandler
+    );
+    this.leftSplitMouseEnterHandler = () => { 
+      this.isHoveringLeft = true; 
+      this.leftSplit.containerEl.addClass('hovered');
+    };
+    this.leftSplit.containerEl.addEventListener(
+      "mouseenter",
+      this.leftSplitMouseEnterHandler
+    );
+    
+    // Add a document-wide click handler to help with collapse issues
+    document.addEventListener("click", this.documentClickHandler);
+  }
+
+  // Remove event listeners
+  removeEventListeners() {
     // remove all event listeners
     document.removeEventListener("mousemove", this.mouseMoveHandler);
     document.removeEventListener("click", this.documentClickHandler);
@@ -201,14 +283,6 @@ export default class OpenSidebarHover extends Plugin {
       const oldMousemove = () => this.leftSplit.containerEl.addClass('hovered');
       this.leftSplit.containerEl.removeEventListener("mousemove", oldMousemove);
     }
-  }
-
-  async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-  }
-
-  async saveSettings() {
-    await this.saveData(this.settings);
   }
 
   // Helper method to update CSS variables
@@ -280,6 +354,9 @@ export default class OpenSidebarHover extends Plugin {
   
   // Event handlers
   mouseMoveHandler = (event: MouseEvent) => {
+    // Don't process if plugin is disabled
+    if (!this.settings.enabled) return;
+    
     const mouseX = event.clientX;
     
     // Handle right sidebar hover
@@ -338,6 +415,9 @@ export default class OpenSidebarHover extends Plugin {
   };
 
   rightSplitMouseLeaveHandler = (event: MouseEvent) => {
+    // Don't process if plugin is disabled
+    if (!this.settings.enabled) return;
+    
     // Don't process if we're leaving to the tab header container or a menu
     const target = event.relatedTarget as HTMLElement;
     if (target && (target.closest('.workspace-tab-header-container-inner') || 
@@ -365,6 +445,9 @@ export default class OpenSidebarHover extends Plugin {
   };
 
   leftSplitMouseLeaveHandler = (event: MouseEvent) => {
+    // Don't process if plugin is disabled
+    if (!this.settings.enabled) return;
+    
     // Don't process if we're leaving to the tab header container or a menu
     const target = event.relatedTarget as HTMLElement;
     if (target && (target.closest('.workspace-tab-header-container-inner') || 
@@ -392,6 +475,9 @@ export default class OpenSidebarHover extends Plugin {
   };
 
   leftRibbonMouseEnterHandler = () => {
+    // Don't process if plugin is disabled
+    if (!this.settings.enabled) return;
+    
     if (this.settings.leftSidebar) {
       this.isHoveringLeft = true;
       setTimeout(() => {
@@ -420,6 +506,27 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
     const { containerEl } = this;
 
     containerEl.empty();
+
+    // MAIN TOGGLE (no heading)
+    new Setting(containerEl)
+      .setName("Enable plugin")
+      .setDesc(
+        "Enable or disable the entire sidebar hover functionality. You can also use the command palette to toggle this setting."
+      )
+      .addToggle((t) =>
+        t.setValue(this.plugin.settings.enabled).onChange(async (value) => {
+          this.plugin.settings.enabled = value;
+          await this.plugin.saveSettings();
+          
+          if (value) {
+            this.plugin.enablePluginFeatures();
+            this.plugin.addEventListeners();
+          } else {
+            this.plugin.disablePluginFeatures();
+            this.plugin.removeEventListeners();
+          }
+        })
+      );
 
     // BASIC SETTINGS (no heading)
     new Setting(containerEl)
@@ -473,11 +580,13 @@ class SidebarHoverSettingsTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.overlayMode = value;
             
-            // Update CSS class on body to toggle overlay mode
-            if (value) {
-              document.body.classList.add("sidebar-overlay-mode");
-            } else {
-              document.body.classList.remove("sidebar-overlay-mode");
+            // Update CSS class on body to toggle overlay mode only if plugin is enabled
+            if (this.plugin.settings.enabled) {
+              if (value) {
+                document.body.classList.add("sidebar-overlay-mode");
+              } else {
+                document.body.classList.remove("sidebar-overlay-mode");
+              }
             }
             
             await this.plugin.saveSettings();
